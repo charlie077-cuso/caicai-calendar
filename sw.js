@@ -1,7 +1,7 @@
 /* 菜菜专属 · Service Worker（离线可用 + 网络优先避免版本错配） */
 'use strict';
 
-const CACHE = 'caicai-v1';
+const CACHE = 'caicai-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './css/styles.css',
   './js/parser.js',
   './js/ics.js',
+  './js/warm.js',
   './js/app.js',
   './vendor/xlsx.full.min.js',
   './icons/icon.svg',

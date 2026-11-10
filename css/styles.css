@@ -697,3 +697,19 @@ input:focus, select:focus {
 .reschedule-row.extra .extra-line { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
 .reschedule-row.extra .extra-top { grid-template-columns: 1fr auto; }
 .reschedule-row.extra .extra-line .muted { text-align: center; }
+
+/* ---------- 温暖文案条 ---------- */
+.warm-strip {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 10px 2px 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.warm-strip .warm-icon { color: var(--brand); flex: none; font-size: 13px; line-height: 1.5; }
+#warm-line { color: var(--ink); }

@@ -174,6 +174,16 @@
     return text + ' 周';
   }
 
+  /* ---------------- 温暖文案 ---------------- */
+
+  function refreshWarm() {
+    try {
+      if (!window.TT || !TT.warm || typeof TT.warm.draw !== 'function') return;
+      var el = document.getElementById('warm-line');
+      if (el) el.textContent = TT.warm.draw();
+    } catch (e) { /* 文案失败不影响主流程 */ }
+  }
+
   /* ---------------- 步骤切换 ---------------- */
 
   function setStep(n) {
@@ -205,6 +215,7 @@
     if (n === 2) renderCourses();
     if (n === 3) prepareCalibration();
     if (n === 4) prepareExport();
+    refreshWarm();
   }
 
   /* ---------------- 文件上传与解析 ---------------- */
@@ -269,6 +280,7 @@
       }
       applyParse(result, best ? best.name : result.sheetName);
       setBusy(false);
+      refreshWarm();
     }).catch(function (e) {
       setBusy(false);
       showParseError('读取文件失败：' + (e && e.message ? e.message : e));
@@ -984,6 +996,7 @@
 
     saveSettings();
     toast('已生成 ' + res.eventCount + ' 个事件，开始下载');
+    refreshWarm();
     $('#export-hint').textContent = '如果手机没有自动打开日历：到通知栏或「文件」里点开下载的 .ics 文件，选择日历导入。';
   }
 

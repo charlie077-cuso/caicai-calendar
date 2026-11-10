@@ -35,6 +35,11 @@
     </ol>
   </nav>
 
+  <div class="warm-strip" id="warm-strip" aria-live="polite">
+    <span class="warm-icon" aria-hidden="true">❀</span>
+    <span id="warm-line">今天也要开开心心的</span>
+  </div>
+
   <main class="main">
 
     <!-- ============ 步骤 1：上传 ============ -->
@@ -107,7 +112,7 @@
     <section class="step" data-step="2" id="step-2">
       <div class="step-head">
         <h2>核对课程</h2>
-        <p class="muted">请检查解析结果。点课程卡片可以修改名称、教师、地点、星期、节次和周次；解析错误或遗漏的课程也可以手动添加。</p>
+        <p class="muted">请检查解析结果。点课程卡片可以修改名称、教师、地点、星期、节次和周次；解析错误或遗漏的课程也可以手动添加。一门一门来，不着急，改错了随时能重来。</p>
       </div>
 
       <div class="notice notice-info" id="review-notice" hidden></div>
@@ -134,7 +139,7 @@
     <section class="step" data-step="3" id="step-3">
       <div class="step-head">
         <h2>校对上课时间</h2>
-        <p class="muted">填 4 个时间就能生成：学期第 1 周周一、上午/下午/晚上第 1 节开始。节间休息和大节之间的课间按模板换算，学校作息特殊可在「高级」里逐节微调。</p>
+        <p class="muted">填 4 个时间就能生成：学期第 1 周周一、上午/下午/晚上第 1 节开始。节间休息和大节之间的课间按模板换算，学校作息特殊可在「高级」里逐节微调。不确定也没关系，先按学校作息填，之后还能回来改。</p>
       </div>
 
       <div class="card q-card">
@@ -236,7 +241,7 @@
     <section class="step" data-step="4" id="step-4">
       <div class="step-head">
         <h2>生成日历文件</h2>
-        <p class="muted">设置好之后点击生成，把下载到的 .ics 文件用手机日历打开即可导入。每周课程会自动重复，单双周和跳过的周次会自动处理。</p>
+        <p class="muted">设置好之后点击生成，把下载到的 .ics 文件用手机日历打开即可导入。每周课程会自动重复，单双周和跳过的周次会自动处理。生成后先加到日历里看看，不合适随时回来调整。</p>
       </div>
 
       <div class="card">
@@ -428,6 +433,7 @@
 <script src="vendor/xlsx.full.min.js"></script>
 <script src="js/parser.js"></script>
 <script src="js/ics.js"></script>
+<script src="js/warm.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
