@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f9e7ee">
+<title>菜菜专属</title>
+<meta name="description" content="菜菜专属的课表日历：上传 Excel 课表，校对上课时间，生成可导入手机日历的 .ics 文件。全程本地处理，不上传文件。">
+<meta name="apple-mobile-web-app-title" content="菜菜专属">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="icons/icon.svg" alt="" width="34" height="34">
+      <div class="brand-text">
+        <strong>菜菜专属</strong>
+        <span>专属课表 → 手机日历</span>
+      </div>
+    </div>
+    <button type="button" class="ghost-btn" id="btn-restart" hidden>重新开始</button>
+  </header>
+
+  <nav class="steps" aria-label="步骤">
+    <ol>
+      <li data-step-dot="1" class="active"><span>1</span><em>上传</em></li>
+      <li data-step-dot="2"><span>2</span><em>核对</em></li>
+      <li data-step-dot="3"><span>3</span><em>校时</em></li>
+      <li data-step-dot="4"><span>4</span><em>导出</em></li>
+    </ol>
+  </nav>
+
+  <main class="main">
+
+    <!-- ============ 步骤 1：上传 ============ -->
+    <section class="step active" data-step="1" id="step-1">
+      <div class="hero">
+        <h1>菜菜专属的课程日历</h1>
+        <p>上传从学校官网下载的 <b>.xls / .xlsx / .csv</b> 课表，核对上课时间后导出 <b>.ics</b>，一次性导入 iPhone 日历、Google 日历等。</p>
+        <ul class="hero-points">
+          <li>文件只在你的浏览器里解析，不会上传到任何服务器</li>
+          <li>自动识别星期、节次、周次（含单双周）与地点</li>
+          <li>手机、平板、电脑都能用，无需注册</li>
+        </ul>
+      </div>
+
+      <div class="drop-zone" id="drop-zone" data-testid="drop-zone">
+        <input type="file" id="file-input" data-testid="file-input" accept=".xls,.xlsx,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+        <button type="button" class="upload-box" id="pick-btn">
+          <span class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M24 32V12m0 0-8 8m8-8 8 8"/><path d="M8 30v5a5 5 0 0 0 5 5h22a5 5 0 0 0 5-5v-5"/>
+            </svg>
+          </span>
+          <strong>点击选择课表文件</strong>
+          <span class="upload-sub">或把 .xls / .xlsx / .csv 文件拖到这里</span>
+        </button>
+        <p class="drop-hint" id="drop-hint">支持学校教务系统导出的 Excel 课表</p>
+      </div>
+
+      <div class="alert alert-error" id="parse-error" data-testid="parse-error" hidden>
+        <strong>没能识别出课表</strong>
+        <p id="parse-error-text">这个文件的表格结构比较特殊。</p>
+        <div class="alert-actions">
+          <button type="button" class="btn btn-ghost" id="btn-manual">手动创建课表</button>
+          <button type="button" class="btn btn-primary" id="btn-retry">换一个文件</button>
+        </div>
+      </div>
+
+      <div class="card parse-card" id="parse-summary" data-testid="parse-summary" hidden>
+        <div class="parse-head">
+          <div>
+            <h2 id="parse-title">课表已解析</h2>
+            <p class="muted" id="parse-subtitle"></p>
+          </div>
+          <span class="badge badge-ok" id="parse-badge">解析成功</span>
+        </div>
+        <dl class="meta-grid" id="parse-meta"></dl>
+        <div class="stat-row">
+          <div class="stat"><b id="course-count" data-testid="course-count">0</b><span>门课程</span></div>
+          <div class="stat"><b id="slot-count">0</b><span>个时段</span></div>
+          <div class="stat"><b id="week-count">0</b><span>周</span></div>
+        </div>
+        <div class="field-row" id="sheet-picker-row" hidden>
+          <label for="sheet-select">选择工作表</label>
+          <select id="sheet-select"></select>
+        </div>
+        <div class="warnings" id="warnings" hidden></div>
+        <div class="card-actions">
+          <button type="button" class="btn btn-ghost" id="btn-change-file">重新选择文件</button>
+          <button type="button" class="btn btn-primary" id="btn-to-review" data-testid="next-1">下一步：核对课程</button>
+        </div>
+      </div>
+
+      <div class="card tip-card">
+        <h3>找不到课表文件？</h3>
+        <p>登录学校教务系统（如正方、强智、URP、青果等），在「我的课表 / 学生个人课表」页面选择导出 Excel（或 CSV），把下载到的文件拖到这里即可。</p>
+      </div>
+    </section>
+
+    <!-- ============ 步骤 2：核对课程 ============ -->
+    <section class="step" data-step="2" id="step-2">
+      <div class="step-head">
+        <h2>核对课程</h2>
+        <p class="muted">请检查解析结果。点课程卡片可以修改名称、教师、地点、星期、节次和周次；解析错误或遗漏的课程也可以手动添加。</p>
+      </div>
+
+      <div class="notice notice-info" id="review-notice" hidden></div>
+
+      <div class="course-toolbar">
+        <button type="button" class="btn btn-ghost" id="btn-add-course">+ 添加课程</button>
+        <button type="button" class="btn btn-ghost" id="btn-toggle-grid">周视图</button>
+        <span class="muted small" id="review-count"></span>
+      </div>
+
+      <div class="tt-scroll" id="grid-wrap" hidden>
+        <table class="timetable-grid" id="timetable-grid"></table>
+      </div>
+
+      <div id="courses-preview" data-testid="courses-preview"></div>
+
+      <div class="empty-state" id="courses-empty" hidden>
+        <p>还没有课程。</p>
+        <button type="button" class="btn btn-primary" id="btn-add-course-2">手动添加第一门课</button>
+      </div>
+    </section>
+
+    <!-- ============ 步骤 3：校对时间 ============ -->
+    <section class="step" data-step="3" id="step-3">
+      <div class="step-head">
+        <h2>校对上课时间</h2>
+        <p class="muted">填 4 个时间就能生成：学期第 1 周周一、上午/下午/晚上第 1 节开始。节间休息和大节之间的课间按模板换算，学校作息特殊可在「高级」里逐节微调。</p>
+      </div>
+
+      <div class="card q-card">
+        <div class="q">
+          <label for="semester-start">学期第 1 周的周一</label>
+          <p class="q-hint">按学校校历填「第 1 周」的周一，不是正式上课那天。例如校历第 1 周从 8 月 31 日开始，就填 8/31；如果 9 月 14 日才正式上课，那天通常是第 3 周。选错也没关系，会自动改成该周的周一。</p>
+          <input type="date" id="semester-start" data-testid="semester-start" required>
+          <p class="field-error" id="semester-start-error" hidden></p>
+        </div>
+
+        <div class="q">
+          <label for="schedule-preset">作息模板</label>
+          <p class="q-hint">选一个接近你们学校的模板；都不合适就选「自定义」，自己填时长和课间。</p>
+          <select id="schedule-preset" data-testid="schedule-preset">
+            <option value="45-5-20" selected>45 分钟/节 · 节间 5 分 · 大节间 20 分（常见）</option>
+            <option value="45-10-20">45 分钟/节 · 节间 10 分 · 大节间 20 分</option>
+            <option value="45-10-10">45 分钟/节 · 节间 10 分 · 大节间 10 分</option>
+            <option value="40-10-10">40 分钟/节 · 节间 10 分 · 大节间 10 分</option>
+            <option value="50-10-20">50 分钟/节 · 节间 10 分 · 大节间 20 分</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+
+        <div class="q-grid">
+          <div class="q">
+            <label for="first-period-time">上午第 1 节开始</label>
+            <p class="q-hint">上午第一节课的上课时间。</p>
+            <input type="time" id="first-period-time" data-testid="first-period-time" value="08:00">
+          </div>
+          <div class="q">
+            <label for="afternoon-start">下午第 1 节开始</label>
+            <p class="q-hint">没有下午课可忽略。</p>
+            <input type="time" id="afternoon-start" data-testid="afternoon-start" value="14:00">
+          </div>
+          <div class="q">
+            <label for="evening-start">晚上第 1 节开始</label>
+            <p class="q-hint">没有晚课可忽略；晚课接着下午连排的学校，把时间清空即可。</p>
+            <input type="time" id="evening-start" data-testid="evening-start" value="19:00">
+          </div>
+        </div>
+
+        <div class="q-grid" id="custom-time-fields" hidden>
+          <div class="q">
+            <label for="lesson-minutes">每节课时长</label>
+            <select id="lesson-minutes" data-testid="lesson-minutes">
+              <option value="40">40 分钟</option>
+              <option value="45" selected>45 分钟</option>
+              <option value="50">50 分钟</option>
+              <option value="60">60 分钟</option>
+            </select>
+          </div>
+          <div class="q">
+            <label for="break-minutes">大节内节间休息</label>
+            <p class="q-hint">同一个大节里，第 1 节和第 2 节之间休息多久。</p>
+            <select id="break-minutes" data-testid="break-minutes">
+              <option value="0">不休息</option>
+              <option value="5" selected>5 分钟</option>
+              <option value="10">10 分钟</option>
+              <option value="15">15 分钟</option>
+              <option value="20">20 分钟</option>
+            </select>
+          </div>
+          <div class="q">
+            <label for="inter-break-minutes">大节之间课间</label>
+            <p class="q-hint">白天第 2→3 节、第 6→7 节之间较长的课间。晚课通常连续排，按上面的节间休息顺延。</p>
+            <select id="inter-break-minutes" data-testid="inter-break-minutes">
+              <option value="5">5 分钟</option>
+              <option value="10">10 分钟</option>
+              <option value="20" selected>20 分钟</option>
+              <option value="30">30 分钟</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="slot-head">
+          <h3>时段预览</h3>
+          <p class="muted small" id="slot-source-hint"></p>
+        </div>
+        <ul class="slot-preview" id="slot-preview" data-testid="slot-preview"></ul>
+        <details class="advanced-slots" id="advanced-slots">
+          <summary>高级：逐节微调时间</summary>
+          <p class="hint">一般不需要动。只有晚课、实验课等特殊作息才需要逐节修改；改过的行不会被模板覆盖。</p>
+          <div class="slot-scroll">
+            <table class="slot-table">
+              <thead>
+                <tr><th>时段</th><th>开始</th><th>结束</th><th class="col-detect">文件中的时间</th></tr>
+              </thead>
+              <tbody id="slot-times"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-reset-slots">全部按上方重新推算</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ 步骤 4：导出 ============ -->
+    <section class="step" data-step="4" id="step-4">
+      <div class="step-head">
+        <h2>生成日历文件</h2>
+        <p class="muted">设置好之后点击生成，把下载到的 .ics 文件用手机日历打开即可导入。每周课程会自动重复，单双周和跳过的周次会自动处理。</p>
+      </div>
+
+      <div class="card">
+        <div class="field-grid">
+          <div class="field">
+            <label for="opt-calendar-name">日历名称</label>
+            <input type="text" id="opt-calendar-name" value="课程表" maxlength="60">
+          </div>
+          <div class="field">
+            <label for="opt-timezone">时区</label>
+            <select id="opt-timezone">
+              <option value="Asia/Shanghai">北京时间 UTC+8</option>
+              <option value="Asia/Hong_Kong">香港 UTC+8</option>
+              <option value="Asia/Taipei">台北 UTC+8</option>
+              <option value="Asia/Singapore">新加坡 UTC+8</option>
+              <option value="Asia/Tokyo">东京 UTC+9</option>
+              <option value="UTC">UTC 世界时</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="opt-reminder">上课提醒</label>
+            <select id="opt-reminder">
+              <option value="0">不提醒</option>
+              <option value="5">提前 5 分钟</option>
+              <option value="10" selected>提前 10 分钟</option>
+              <option value="15">提前 15 分钟</option>
+              <option value="30">提前 30 分钟</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="opt-mode">重复方式</label>
+            <select id="opt-mode">
+              <option value="recurring" selected>每周重复（推荐）</option>
+              <option value="single">每次单独一条</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="reschedule-card">
+        <div class="slot-head">
+          <h3>调课 / 停课</h3>
+          <p class="muted small">有停课、放假或补课时在这里加。导出的日历会自动跳过停课日期，并把补课单独加进去；没有就留空。</p>
+        </div>
+
+        <div class="reschedule-group">
+          <div class="reschedule-title">
+            <span>停课日期（当天所有课都不排）</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-add-skip" data-testid="add-skip">+ 添加停课日期</button>
+          </div>
+          <ul class="reschedule-list" id="skip-list" data-testid="skip-list"></ul>
+          <p class="hint" id="skip-empty">没有停课日期，默认整学期按课表重复。</p>
+        </div>
+
+        <div class="reschedule-group">
+          <div class="reschedule-title">
+            <span>补课 / 临时调课</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-add-extra" data-testid="add-extra">+ 添加补课</button>
+          </div>
+          <ul class="reschedule-list" id="extra-list" data-testid="extra-list"></ul>
+          <p class="hint" id="extra-empty">没有补课，默认只按课表重复。</p>
+        </div>
+      </div>
+
+      <div class="card export-card">
+        <div class="export-summary" id="export-summary">正在统计…</div>
+        <button type="button" class="btn btn-primary btn-xl" id="btn-export" data-testid="export-ics">生成并下载 .ics 文件</button>
+        <button type="button" class="btn btn-ghost btn-xl" id="btn-share" data-testid="share-ics" hidden>分享 .ics 文件到其他应用</button>
+        <a class="btn btn-ghost btn-xl" id="download-ics" data-testid="download-ics" hidden download>再次下载</a>
+        <p class="hint" id="export-hint"></p>
+      </div>
+
+      <div class="card install-card" id="install-card" hidden>
+        <h3>装到手机主屏幕</h3>
+        <p class="muted small">像 App 一样从桌面打开，断网也能用。</p>
+        <button type="button" class="btn btn-primary" id="btn-install" data-testid="install-app">安装到主屏幕</button>
+      </div>
+
+      <details class="card import-help" open id="import-help">
+        <summary>怎么导入到手机日历？</summary>
+        <div class="import-cols">
+          <div>
+            <h4>iPhone / iPad</h4>
+            <ol>
+              <li>点「生成并下载」，Safari 会提示用「日历」打开。</li>
+              <li>选择要加入的日历，点「添加全部」。</li>
+              <li>若没有自动打开：打开「文件」App，点一下下载的 .ics 文件。</li>
+            </ol>
+          </div>
+          <div>
+            <h4>安卓：系统日历（三星 / 小米 / 华为 / OPPO 等）</h4>
+            <ol>
+              <li>下载后，在通知栏或「文件管理 → 下载」里点一下 .ics 文件。</li>
+              <li>选择「日历」或手机自带日历，按提示导入到本机日历。</li>
+              <li>若本机日历同步了 Google 账号，事件也会一起同步过去。</li>
+            </ol>
+          </div>
+          <div>
+            <h4>安卓 + Google 日历（官方支持的方式）</h4>
+            <ol>
+              <li>Google 日历 App 没有导入按钮，要用手机浏览器打开 <a href="https://calendar.google.com/calendar/u/0/r/settings/export" target="_blank" rel="noopener" data-testid="google-import-link">Google 日历导入页</a>。</li>
+              <li>在 Chrome 右上角菜单里勾选「桌面版网站」，页面会变成电脑版。</li>
+              <li>点「导入和导出」→「选择文件」→ 选中下载的 .ics → 导入。</li>
+            </ol>
+          </div>
+          <div>
+            <h4>Google 日历 / 电脑</h4>
+            <ol>
+              <li>打开 Google 日历网页版 → 设置 → 导入和导出。</li>
+              <li>选择 .ics 文件和目标日历后导入；单个文件需小于 1 MB。</li>
+            </ol>
+          </div>
+        </div>
+        <p class="hint">导入是一次性复制。想持续同步，可以把 .ics 放到自己的网址，在 Google 日历「其他日历 → 通过网址添加」订阅；安卓也可用 ICSx⁵ 等 App 订阅该链接。</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>本地处理 · 不上传文件 · 开源工具</span>
+    <span class="footer-sep">·</span>
+    <span>首次使用建议先用手机日历确认时间是否正确</span>
+  </footer>
+
+  <!-- 底部导航 -->
+  <div class="bottom-nav" id="bottom-nav" hidden>
+    <button type="button" class="btn btn-ghost" id="btn-back">上一步</button>
+    <button type="button" class="btn btn-primary" id="btn-next" data-testid="btn-next">下一步</button>
+  </div>
+
+  <div class="status" id="status" data-testid="status" role="status" aria-live="polite" hidden></div>
+</div>
+
+<!-- 编辑课程对话框 -->
+<dialog class="dialog" id="edit-dialog">
+  <form method="dialog" id="edit-form">
+    <h2 id="edit-title">编辑课程</h2>
+    <div class="field">
+      <label for="edit-name">课程名称 <span class="req">*</span></label>
+      <input type="text" id="edit-name" required maxlength="80" autocomplete="off">
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label for="edit-weekday">星期</label>
+        <select id="edit-weekday">
+          <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+          <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option>
+          <option value="7">周日</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="edit-slot-start">开始时段</label>
+        <select id="edit-slot-start"></select>
+      </div>
+      <div class="field">
+        <label for="edit-slot-end">结束时段</label>
+        <select id="edit-slot-end"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="edit-weeks">周次</label>
+      <input type="text" id="edit-weeks" placeholder="例如：1-16 或 1-8,10-16 或 1-16单周" autocomplete="off">
+      <p class="field-hint">支持 1-16、1,3,5-9、单周、双周、1-16单周 等写法</p>
+    </div>
+    <div class="field-grid">
+      <div class="field">
+        <label for="edit-teacher">教师</label>
+        <input type="text" id="edit-teacher" maxlength="60" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="edit-location">地点</label>
+        <input type="text" id="edit-location" maxlength="100" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label for="edit-note">备注</label>
+      <input type="text" id="edit-note" maxlength="120" autocomplete="off">
+    </div>
+    <p class="field-error" id="edit-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-danger-ghost" id="edit-delete">删除这门课</button>
+      <span class="grow"></span>
+      <button type="button" class="btn btn-ghost" id="edit-cancel">取消</button>
+      <button type="submit" class="btn btn-primary" id="edit-save">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/ics.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
